@@ -107,6 +107,8 @@ class Ui_MainWindow(object):
         imageFolder = str(QFileDialog.getExistingDirectory(None, "Select Image Directory"))
         INPUT_IMAGE_URL=imageFolder
         print("selected folder's directory is "+imageFolder)
+        _translate = QtCore.QCoreApplication.translate
+        self.pushButton_3.setText(_translate("MainWindow", imageFolder))
         #TODO
         # open directory folder of image files
         # if someone select video file,
@@ -122,6 +124,8 @@ class Ui_MainWindow(object):
         modelFile=str(QFileDialog.getOpenFileName(None, 'Hey! Select a TFlite Model', "" , filter='*.tflite'))
         model_path=modelFile
         print("selected TFlite model's directroy is "+modelFile)
+        _translate = QtCore.QCoreApplication.translate
+        self.pushButton_4.setText(_translate("MainWindow", model_path))
         #TODO
         # open directory folder
         # to select tflite model
