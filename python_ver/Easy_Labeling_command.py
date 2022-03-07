@@ -14,6 +14,12 @@ from xml.etree.ElementTree import Element, SubElement, ElementTree
 import tensorflow as tf
 assert tf.__version__.startswith('2')
 
+#time module
+import time
+
+#broke_image_check
+import libs.check_broken_image
+
 tf.get_logger().setLevel('ERROR')
 from absl import logging
 logging.set_verbosity(logging.ERROR)
@@ -207,8 +213,14 @@ if __name__ == "__main__":
   INPUT_IMAGE_URL=str(input("please type the directory of images: "))
   if not INPUT_IMAGE_URL:
     INPUT_IMAGE_URL = './images/'
+    
   print(INPUT_IMAGE_URL)
+  if libs.check_broken_image.check_images(INPUT_IMAGE_URL)==True:
+    print("good")
+  else:
+    print(libs.check_broken_image.check_images)
 
+    
   #컨피던스 조절
   DETECTION_THRESHOLD=float(input("please type the threshhold(0~1 default 0.4): "))
   if DETECTION_THRESHOLD>1 or DETECTION_THRESHOLD<0:
@@ -231,14 +243,24 @@ if __name__ == "__main__":
   i=0
 
   for file in imagesTo:
-      pbar.update(i)
-      i+=1
-      detection_result_image = run_odt_and_draw_results(
-              INPUT_IMAGE_URL+file, 
-              file,
-              interpreter, 
-              threshold=DETECTION_THRESHOLD,
-          )
+    if file==0:
+      firstTime= time.time()
+
+    
+    pbar.update(i)
+    i+=1
+    detection_result_image = run_odt_and_draw_results(
+            INPUT_IMAGE_URL+file, 
+            file,
+            interpreter, 
+            threshold=DETECTION_THRESHOLD,
+        )
+    if file==imagesTo:
+      secondTime=time.time()
+      secondTime-=firstTime
+      print("Total Time: "+str(secondTime))
+      print("1 image per time: "+str(secondTime/imagesTo))
+      
   pbar.close()
 
 
