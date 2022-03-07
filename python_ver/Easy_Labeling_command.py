@@ -55,7 +55,7 @@ def get_output_tensor(interpreter, index):
   return tensor
 
 
-def detect_objects(interpreter, image, threshold, model_type):
+def detect_objects(interpreter, image, threshold):
   """Returns a list of detection results, each a dictionary of object info."""
   # Feed the input image to the model
   set_input_tensor(interpreter, image)
@@ -71,6 +71,7 @@ def detect_objects(interpreter, image, threshold, model_type):
 
   elif model_type=="accurate":
     #efficient model
+    #tensorflow model maker
     boxes = get_output_tensor(interpreter, 1)
     classes = get_output_tensor(interpreter, 3)
     scores = get_output_tensor(interpreter, 0)
@@ -78,10 +79,10 @@ def detect_objects(interpreter, image, threshold, model_type):
 
   else:
     #efficient model
-    boxes = get_output_tensor(interpreter, 1)
-    classes = get_output_tensor(interpreter, 3)
-    scores = get_output_tensor(interpreter, 0)
-    count = int(get_output_tensor(interpreter, 2))
+    boxes = get_output_tensor(interpreter, 0)
+    classes = get_output_tensor(interpreter, 1)
+    scores = get_output_tensor(interpreter, 2)
+    count = int(get_output_tensor(interpreter, 3))
   
 
   results = []
@@ -96,7 +97,7 @@ def detect_objects(interpreter, image, threshold, model_type):
   return results
 
 
-def run_odt_and_draw_results(image_path, imageName, interpreter, threshold, model_type):
+def run_odt_and_draw_results(image_path, imageName, interpreter, threshold):
   """Run object detection on the input image and draw the detection results"""
   # Load the input shape required by the model
   _, input_height, input_width, _ = interpreter.get_input_details()[0]['shape']
@@ -108,7 +109,7 @@ def run_odt_and_draw_results(image_path, imageName, interpreter, threshold, mode
     )
 
   # Run object detection on the input image
-  results = detect_objects(interpreter, preprocessed_image, threshold=threshold, model_type=model_type)
+  results = detect_objects(interpreter, preprocessed_image, threshold=threshold)
 
   # Plot the detection results on the input image
   original_image_np = original_image.numpy().astype(np.uint8)
@@ -137,12 +138,6 @@ def makeAnnotation(imageName, results, original_image_np ):
  
     SubElement(root, 'segmented').text = '0'
 
-    ###################나중에 위치 옮기자
-    #classes=['child_sign','person','car_rear','bicycle','kickboard','motorcycle','30','40','50','60','70']
-    
-    #편의점 용 classes
-    #classes=['beer_berni', 'beer_blanc', 'beer_bud', 'beer_cass_fresh', 'beer_cloud_original', 'beer_filgood_7', 'beer_filgood_original', 'beer_filite_original', 'beer_heineken', 'beer_terra', 'beer_tsingtao', 'can_2per', 'can_chilsung', 'can_coca_zero', 'can_demi_apple', 'can_demi_lemon', 'can_fanta_orange', 'can_gatorade', 'can_mac_col', 'can_milkis', 'can_mountdew', 'can_pearjuice', 'can_pocari', 'can_powerade', 'can_sprite', 'can_toreta', 'juice_capri-sun_orange', 'milk_banana', 'milk_banana_lite', 'milk_chocochoco', 'milk_coffeecoffee', 'milk_deliciousmilk_300', 'soju_drop_fresh', 'soju_drop_jamong', 'soju_drop_original', 'soju_goodday_blueberry', 'soju_jinro', 'soju_likefirst', 'soju_likefirst_soft', 'soju_maehwa', 'viyott_chococrispy', 'viyott_cookiecream', 'viyott_crunch']
-    
     for obj in results:
         # Convert the object bounding box from relative coordinates to absolute 
         # coordinates based on the original image resolution
@@ -179,12 +174,15 @@ def read_labels(label_txt):
   
   file.close()
 
+  #...
+  print(classes)
+
 
 if __name__ == "__main__":
 
   #default
   model_type="accurate"
-  DETECTION_THRESHOLD = 0.5
+  DETECTION_THRESHOLD = 0.4
   INPUT_IMAGE_URL = './images/'
   model_path='./models/efficientdet4.tflite'
   label_txt='./models/labels.txt'
@@ -194,22 +192,29 @@ if __name__ == "__main__":
   label_txt=str(input("please type the location of labels.txt: "))
   if not label_txt:
     print("wrong location -> default labels.txt")
+    label_txt='./models/labels.txt'
+  print(label_txt)
   read_labels(label_txt)
 
   #인풋 모델
   model_path=str(input("please type the location of TFlite model: "))
   if not model_path:
     model_type=str(input("you are going to use default model. please type what type of model you want( speed / accurate )"))
-  
+    model_path='./models/efficientdet4.tflite'
+  print(model_path)
+
   #인풋 사진
   INPUT_IMAGE_URL=str(input("please type the directory of images: "))
+  if not INPUT_IMAGE_URL:
+    INPUT_IMAGE_URL = './images/'
+  print(INPUT_IMAGE_URL)
 
   #컨피던스 조절
-  DETECTION_THRESHOLD=float(input("please type the threshhold(0~1 default 0.4):n "))
+  DETECTION_THRESHOLD=float(input("please type the threshhold(0~1 default 0.4): "))
   if DETECTION_THRESHOLD>1 or DETECTION_THRESHOLD<0:
     print("you typed wrong number...")
-
-  print("DETECTION_THRESHOLD = "+DETECTION_THRESHOLD)
+    DETECTION_THRESHOLD = 0.4
+  print("DETECTION_THRESHOLD = "+str(DETECTION_THRESHOLD))
 
   # Load the TFLite model
   interpreter = tf.lite.Interpreter(model_path=model_path)
@@ -233,7 +238,6 @@ if __name__ == "__main__":
               file,
               interpreter, 
               threshold=DETECTION_THRESHOLD,
-              model_type=model_type
           )
   pbar.close()
 
