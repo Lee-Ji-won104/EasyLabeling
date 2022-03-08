@@ -6,7 +6,9 @@ import cv2
 import numpy as np
 import xml.etree.ElementTree as ET
 import os
-import sys
+
+#time library
+from datetime import datetime
 
 ia.seed(1)
 
@@ -56,63 +58,58 @@ def createFolder(directory):
     except OSError:
         print ('Error: Creating directory. ' +  directory)
  
+def start_aug(image_folder, augSeq):
+
+    abc=1
+    current_time=datetime.now()
+    current_time=str(current_time.year)+'_'+str(current_time.month)+'_'+str(current_time.day)+'_'+str(current_time.hour)+'_'+str(current_time.minute)
+
+    createFolder(image_folder+current_time)
 
 
-abc=1
-defe='fog'
-createFolder('/Users/easy47/Desktop/train_'+defe+'/')
+    for i in range(abc):
+    #횟수 조절 하는 코드
 
-print(defe)
-for i in range(abc):
-    dir = '/Users/easy47/Desktop/train/'
-    dir2 = '/Users/easy47/Desktop/train_'+defe+'/'
-    images, annotations = read_train_dataset(dir)
-    print(len(images),"\n")
+        dir = image_folder
+        dir2 = dir+current_time+'/'
 
-    for idx in range(len(images)):
-        image = images[idx]
-        boxes = annotations[idx][0]
+        images, annotations = read_train_dataset(dir)
+        print(len(images),"\n")
 
-        ia_bounding_boxes = []
-        for box in boxes:
-            ia_bounding_boxes.append(ia.BoundingBox(x1=box[1], y1=box[2], x2=box[3], y2=box[4]))
+        for idx in range(len(images)):
+            image = images[idx]
+            boxes = annotations[idx][0]
 
-        bbs = ia.BoundingBoxesOnImage(ia_bounding_boxes, shape=image.shape)
+            ia_bounding_boxes = []
+            for box in boxes:
+                ia_bounding_boxes.append(ia.BoundingBox(x1=box[1], y1=box[2], x2=box[3], y2=box[4]))
 
-        seq = iaa.Sequential([
-            #iaa.Multiply((1.0, 1.0))
-            iaa.Affine(scale=(0.3, 0.7))
-            #,iaa.MotionBlur(k=3)
-            #,iaa.GaussianBlur(sigma=(0.5, 3.0))
-            #,iaa.Cutout(nb_iterations=(1, 5), size=0.2, squared=False)
-            #,iaa.Snowflakes(flake_size=(0.1, 0.4), speed=(0.01, 0.05))
-            #,iaa.Rain(speed=(0.1, 0.3))
-            ,iaa.Fog()
-            #,
-        ])
+            bbs = ia.BoundingBoxesOnImage(ia_bounding_boxes, shape=image.shape)
 
-        seq_det = seq.to_deterministic()
+            seq = iaa.Sequential(augSeq)
 
-        image_aug = seq_det.augment_images([image])[0]
-        bbs_aug = seq_det.augment_bounding_boxes([bbs])[0]
+            seq_det = seq.to_deterministic()
 
-        
-        new_image_file = dir2 + defe + annotations[idx][2]
-        #print(new_image_file)
-        if '.' in new_image_file:
-            new_image_file= new_image_file.replace('.jpg',"",1)
-            print(new_image_file)
+            image_aug = seq_det.augment_images([image])[0]
+            bbs_aug = seq_det.augment_bounding_boxes([bbs])[0]
 
-        cv2.imwrite(new_image_file, image_aug)
+            
+            new_image_file = dir2 + current_time + annotations[idx][2]
+            #print(new_image_file)
+            if '.' in new_image_file:
+                new_image_file= new_image_file.replace('.jpg',"",1)
+                print(new_image_file)
 
-        h, w = np.shape(image_aug)[0:2]
-        voc_writer = Writer(new_image_file, w, h)
+            cv2.imwrite(new_image_file, image_aug)
 
-        for i in range(len(bbs_aug.bounding_boxes)):
-            bb_box = bbs_aug.bounding_boxes[i]
-            voc_writer.addObject(boxes[i][0], int(bb_box.x1), int(bb_box.y1), int(bb_box.x2), int(bb_box.y2))
+            h, w = np.shape(image_aug)[0:2]
+            voc_writer = Writer(new_image_file, w, h)
 
-        voc_writer.save(dir2 + defe+ annotations[idx][1])
-        print(idx/len(images)*100)
+            for i in range(len(bbs_aug.bounding_boxes)):
+                bb_box = bbs_aug.bounding_boxes[i]
+                voc_writer.addObject(boxes[i][0], int(bb_box.x1), int(bb_box.y1), int(bb_box.x2), int(bb_box.y2))
 
-print("complete! ")
+            voc_writer.save(dir2 + current_time + annotations[idx][1])
+            print(idx/len(images)*100)
+
+    print("complete! ")

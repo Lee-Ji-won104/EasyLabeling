@@ -17,6 +17,11 @@ import time
 #broke_image_check
 import libs.check_image
 
+#augmenatations
+import libs.imgaug_object_detection
+
+from imgaug import augmenters as iaa
+
 tf.get_logger().setLevel('ERROR')
 from absl import logging
 logging.set_verbosity(logging.ERROR)
@@ -275,4 +280,54 @@ if __name__ == "__main__":
       
   #pbar.close()
 
+  while True:
+      
+    # Augmenatation
+    augQuest=str(input("Do you want to Augmentate your Datasets? (Y/N): "))
+    augSeq=[]
 
+    if augQuest=="Y":
+      
+      print("What type of augmentations do you want?:")
+
+      while True:
+        print("******fog*****")
+        print("****affine****")
+        print("*gausian blur*")
+        print("*****rain*****")
+        print("***snowflake**")
+        print("     exit      ")
+        
+        augType=str(input("please choose: "))
+        if augType=="fog":
+          augSeq.append(iaa.Fog())
+        
+        elif augType=="affine":
+          augSeq.append(iaa.Affine(scale=(0.3, 0.7)))
+
+        elif augType=="gausian blur":
+          augSeq.append(iaa.GaussianBlur(sigma=(0.5, 3.0)))
+        
+        elif augType=="rain":
+          augSeq.append(iaa.Rain(speed=(0.1, 0.3)))
+
+        elif augType=="snowflake":
+          augSeq.append(iaa.Snowflakes(flake_size=(0.1, 0.4), speed=(0.01, 0.05)))
+
+        elif augType=="exit":
+          break
+
+        else:
+          print("you typed the wrong words.")
+
+
+      libs.imgaug_object_detection.start_aug(INPUT_IMAGE_URL,augSeq=augSeq)
+      break
+
+    elif augQuest=="N":
+
+      print("Ok, All process is complete!!!!!! Enjoy your Deep Learning!")
+      quit()
+
+    else:
+      print(" You Typed Wrong. Please Type Y/N.")
