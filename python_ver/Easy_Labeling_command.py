@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from tqdm import tqdm
+#from tqdm import tqdm
 import cv2
 import tensorflow as tf
 from PIL import Image
@@ -7,9 +7,6 @@ import numpy as np
 import os
 from os import listdir
 from xml.etree.ElementTree import Element, SubElement, ElementTree
-#from tflite_model_maker.config import ExportFormat
-#from tflite_model_maker import model_spec
-#from tflite_model_maker import object_detector
 
 import tensorflow as tf
 assert tf.__version__.startswith('2')
@@ -18,7 +15,7 @@ assert tf.__version__.startswith('2')
 import time
 
 #broke_image_check
-import libs.check_broken_image
+import libs.check_image
 
 tf.get_logger().setLevel('ERROR')
 from absl import logging
@@ -85,6 +82,7 @@ def detect_objects(interpreter, image, threshold):
 
   else:
     #efficient model
+    #this is default now.
     boxes = get_output_tensor(interpreter, 0)
     classes = get_output_tensor(interpreter, 1)
     scores = get_output_tensor(interpreter, 2)
@@ -148,10 +146,23 @@ def makeAnnotation(imageName, results, original_image_np ):
         # Convert the object bounding box from relative coordinates to absolute 
         # coordinates based on the original image resolution
         ymin, xmin, ymax, xmax = obj['bounding_box']
+        
         xmin = int(xmin * original_image_np.shape[1])
+        if xmin<0:
+          xmin=0
+
         xmax = int(xmax * original_image_np.shape[1])
+        if xmax>width:
+          xmax=width
+
         ymin = int(ymin * original_image_np.shape[0])
+        if ymin<0:
+          ymin=0
+
         ymax = int(ymax * original_image_np.shape[0])
+        if ymax>height:
+          ymax=height
+
         # Find the class index of the current object
         class_id = classes[int(obj['class_id'])]
 
@@ -215,10 +226,12 @@ if __name__ == "__main__":
     INPUT_IMAGE_URL = './images/'
     
   print(INPUT_IMAGE_URL)
-  if libs.check_broken_image.check_images(INPUT_IMAGE_URL)==True:
-    print("good")
-  else:
-    print(libs.check_broken_image.check_images)
+
+  #check image is good or bad.
+  #if images's condition is bad, 
+  #remove that images.
+
+  libs.check_image.start_check(INPUT_IMAGE_URL)
 
     
   #컨피던스 조절
@@ -239,28 +252,27 @@ if __name__ == "__main__":
 
   imagesTo.sort()
 
-  pbar=tqdm(total=len(imagesTo))
-  i=0
+  #pbar=tqdm(total=len(imagesTo))
+  #i=0
 
   for file in imagesTo:
-    if file==0:
-      firstTime= time.time()
-
     
-    pbar.update(i)
-    i+=1
+    #pbar.update(i)
+    #i+=1
+    print(file+"  is Easy-Labeling!!")
+    firstTime= time.time()
+  
     detection_result_image = run_odt_and_draw_results(
             INPUT_IMAGE_URL+file, 
             file,
             interpreter, 
             threshold=DETECTION_THRESHOLD,
         )
-    if file==imagesTo:
-      secondTime=time.time()
-      secondTime-=firstTime
-      print("Total Time: "+str(secondTime))
-      print("1 image per time: "+str(secondTime/imagesTo))
+  
+    secondTime=time.time()
+    secondTime-=firstTime
+    print("Inference Time: "+str(secondTime))
       
-  pbar.close()
+  #pbar.close()
 
 
