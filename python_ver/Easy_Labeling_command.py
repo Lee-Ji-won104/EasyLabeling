@@ -126,10 +126,7 @@ def run_odt_and_draw_results(image_path, imageName, interpreter, threshold):
   # Plot the detection results on the input image
   original_image_np = original_image.numpy().astype(np.uint8)
 
-  drawResult=makeAnnotation(imageName, results, original_image_np)
-  if showImage==True:
-    return drawResult
-  #print("success")
+  makeAnnotation(imageName, results, original_image_np)
 
 def makeAnnotation(imageName, results, original_image_np ):
     filename = imageName #이름을 넣어주자
@@ -174,9 +171,9 @@ def makeAnnotation(imageName, results, original_image_np ):
           ymax=height
 
         #This is Option
-        if showImage==True:
-          red_color=(0,0,255)
-          drawImage=cv2.rectangle(original_image_np, (xmin, ymin), (xmax, ymax),red_color ,2)
+        #if showImage==True:
+        #  red_color=(0,0,255)
+        #  drawImage=cv2.rectangle(original_image_np, (xmin, ymin), (xmax, ymax),red_color ,2)
 
         # Find the class index of the current object
         class_id = classes[int(obj['class_id'])]
@@ -202,8 +199,8 @@ def makeAnnotation(imageName, results, original_image_np ):
     tree.write(INPUT_IMAGE_URL+fileName+'.xml')
 
     #This is Option
-    if showImage==True:
-      return drawImage
+    #if showImage==True:
+    #  cv2.imshow('result_image',drawImage)
 
 
 def read_labels(label_txt):
@@ -326,8 +323,6 @@ if __name__ == "__main__":
             interpreter, 
             threshold=DETECTION_THRESHOLD,
         )
-    if showImage==True and detection_result_image.all():
-      cv2.imshow('result_image',detection_result_image)
   
     secondTime=time.time()
     secondTime-=firstTime
