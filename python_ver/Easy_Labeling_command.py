@@ -17,6 +17,9 @@ import time
 #broke_image_check
 import libs.check_image
 
+#check_precision
+import libs.check_precision
+
 #augmenatations
 import libs.imgaug_object_detection
 
@@ -123,13 +126,15 @@ def run_odt_and_draw_results(image_path, imageName, interpreter, threshold):
   # Plot the detection results on the input image
   original_image_np = original_image.numpy().astype(np.uint8)
 
-  makeAnnotation(imageName, results, original_image_np)
-    
+  drawResult=makeAnnotation(imageName, results, original_image_np)
+  if showImage==True:
+    return drawResult
   #print("success")
-
 
 def makeAnnotation(imageName, results, original_image_np ):
     filename = imageName #이름을 넣어주자
+    fileName2=imageName.rsplit('.')[0]
+
     width = original_image_np.shape[1]
     height = original_image_np.shape[0]
  
@@ -168,9 +173,19 @@ def makeAnnotation(imageName, results, original_image_np ):
         if ymax>height:
           ymax=height
 
+        #This is Option
+        if showImage==True:
+          red_color=(0,0,255)
+          drawImage=cv2.rectangle(original_image_np, (xmin, ymin), (xmax, ymax),red_color ,2)
+
         # Find the class index of the current object
         class_id = classes[int(obj['class_id'])]
 
+        #Check Precision
+        if checkPrecision== True:
+          if class_id != None:
+            libs.check_precision.calculate_MBTI(class_id, fileName2)
+          
         obj = SubElement(root, 'object')
         SubElement(obj, 'name').text = class_id
         SubElement(obj, 'pose').text = 'Unspecified'
@@ -185,6 +200,11 @@ def makeAnnotation(imageName, results, original_image_np ):
     fileName=imageName.rsplit('.')[0]
     tree = ElementTree(root)
     tree.write(INPUT_IMAGE_URL+fileName+'.xml')
+
+    #This is Option
+    if showImage==True:
+      return drawImage
+
 
 def read_labels(label_txt):
   file=open(label_txt,"r")
@@ -209,6 +229,31 @@ if __name__ == "__main__":
   model_path='./models/efficientdet4.tflite'
   label_txt='./models/labels.txt'
   classes=[]
+  showImage=False
+
+  #check showing images
+  showImg=str(input('Do you want to check the bounding boxes of photos? (Y/N) '))
+  if showImg=='Y' or showImg=='y':
+    showImage=True
+    print('you can check the bounding boxes')
+
+  elif showImg=='N' or showImg=='n':
+    showImage=False
+
+  else:
+    showImage=False
+
+  #check precision of model
+  check_P=str(input('Are you going to check the precision of your model? (Y/N)' ))
+  if check_P=='Y' or check_P=='y':
+    checkPrecision=True
+    print(' This machine will check the precision of your model ')
+  elif check_P=='N' or check_P=='n':
+    checkPrecision=False
+    print('THis machine won\'t check the precision of your model')
+  else:
+    print('Wrong Input... this machine won\'t check the precision of your model')
+    check_P=False
 
   #read label
   label_txt=str(input("please type the location of labels.txt: "))
@@ -222,7 +267,12 @@ if __name__ == "__main__":
   model_path=str(input("please type the location of TFlite model: "))
   if not model_path:
     model_type=str(input("you are going to use default model. please type what type of model you want( speed / accurate )"))
-    model_path='./models/efficientdet4.tflite'
+    if model_type=='speed':
+      model_path='./models/ssd_mobilenet.tflite'
+    elif model_type=='accurate':
+      model_path='./models/efficientdet4.tflite'
+    else:
+      model_path='./models/efficientdet4.tflite'
   print(model_path)
 
   #인풋 사진
@@ -235,7 +285,6 @@ if __name__ == "__main__":
   #check image is good or bad.
   #if images's condition is bad, 
   #remove that images.
-
   libs.check_image.start_check(INPUT_IMAGE_URL)
 
     
@@ -244,6 +293,7 @@ if __name__ == "__main__":
   if DETECTION_THRESHOLD>1 or DETECTION_THRESHOLD<0:
     print("you typed wrong number...")
     DETECTION_THRESHOLD = 0.4
+
   print("DETECTION_THRESHOLD = "+str(DETECTION_THRESHOLD))
 
   # Load the TFLite model
@@ -258,13 +308,16 @@ if __name__ == "__main__":
   imagesTo.sort()
 
   #pbar=tqdm(total=len(imagesTo))
-  #i=0
+  i=0
 
   for file in imagesTo:
     
     #pbar.update(i)
     #i+=1
+    print('-------------------------------')
     print(file+"  is Easy-Labeling!!")
+    print(str(i/len(imagesTo)*100)+' is done.')
+    i+=1
     firstTime= time.time()
   
     detection_result_image = run_odt_and_draw_results(
@@ -273,12 +326,24 @@ if __name__ == "__main__":
             interpreter, 
             threshold=DETECTION_THRESHOLD,
         )
+    if showImage==True and detection_result_image.all():
+      cv2.imshow('result_image',detection_result_image)
   
     secondTime=time.time()
     secondTime-=firstTime
     print("Inference Time: "+str(secondTime))
-      
+    print('-------------------------------')
   #pbar.close()
+
+  if checkPrecision==True:
+    result_list=libs.check_precision.calculate_All()
+    d=['accuracy','recall','precision','F1']
+    ak47=0
+
+    for a in result_list:
+      print(d[ak47]+' is ',end='')
+      print(str(a))
+      ak47+=1
 
   while True:
       
@@ -331,3 +396,6 @@ if __name__ == "__main__":
 
     else:
       print(" You Typed Wrong. Please Type Y/N.")
+
+  cv2.destroyAllWindows()
+
