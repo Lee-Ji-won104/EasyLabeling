@@ -149,6 +149,9 @@ def makeAnnotation(imageName, results, original_image_np ):
  
     SubElement(root, 'segmented').text = '0'
 
+    if len(results)<1:
+      drawImage=original_image_np
+
     for obj in results:
         # Convert the object bounding box from relative coordinates to absolute 
         # coordinates based on the original image resolution
@@ -171,9 +174,9 @@ def makeAnnotation(imageName, results, original_image_np ):
           ymax=height
 
         #This is Option
-        #if showImage==True:
-        #  red_color=(0,0,255)
-        #  drawImage=cv2.rectangle(original_image_np, (xmin, ymin), (xmax, ymax),red_color ,2)
+        if showImage==True:
+          red_color=(0,0,255)
+          drawImage=cv2.rectangle(original_image_np, (xmin, ymin), (xmax, ymax),red_color ,2)
 
         # Find the class index of the current object
         class_id = classes[int(obj['class_id'])]
@@ -194,13 +197,19 @@ def makeAnnotation(imageName, results, original_image_np ):
         SubElement(bbox, 'xmax').text = str(xmax)
         SubElement(bbox, 'ymax').text = str(ymax)
     
+
     fileName=imageName.rsplit('.')[0]
     tree = ElementTree(root)
     tree.write(INPUT_IMAGE_URL+fileName+'.xml')
 
     #This is Option
-    #if showImage==True:
-    #  cv2.imshow('result_image',drawImage)
+    if showImage==True:
+      cv2.imwrite(SHOW_IMAGE_URL+str(i)+'.jpg', drawImage)
+    
+    if i<16:
+      drawImage=cv2.resize(drawImage,dsize=(400,200))
+      imageList.append(drawImage)
+      
 
 
 def read_labels(label_txt):
@@ -223,13 +232,15 @@ if __name__ == "__main__":
   model_type="accurate"
   DETECTION_THRESHOLD = 0.4
   INPUT_IMAGE_URL = './images/'
+  SHOW_IMAGE_URL='./detected/'
   model_path='./models/efficientdet4.tflite'
   label_txt='./models/labels.txt'
   classes=[]
+  imageList=[]
   showImage=False
 
   #check showing images
-  showImg=str(input('Do you want to check the bounding boxes of photos? (Y/N) '))
+  showImg=str(input('Do you want to check the bounding boxes of photos? (Y/N) ->'))
   if showImg=='Y' or showImg=='y':
     showImage=True
     print('you can check the bounding boxes')
@@ -241,7 +252,7 @@ if __name__ == "__main__":
     showImage=False
 
   #check precision of model
-  check_P=str(input('Are you going to check the precision of your model? (Y/N)' ))
+  check_P=str(input('Are you going to check the precision of your model? (Y/N) ->' ))
   if check_P=='Y' or check_P=='y':
     checkPrecision=True
     print(' This machine will check the precision of your model ')
@@ -253,7 +264,7 @@ if __name__ == "__main__":
     check_P=False
 
   #read label
-  label_txt=str(input("please type the location of labels.txt: "))
+  label_txt=str(input("please type the location of labels.txt: ->"))
   if not label_txt:
     print("wrong location -> default labels.txt")
     label_txt='./models/labels.txt'
@@ -261,9 +272,9 @@ if __name__ == "__main__":
   read_labels(label_txt)
 
   #인풋 모델
-  model_path=str(input("please type the location of TFlite model: "))
+  model_path=str(input("please type the location of TFlite model: ->"))
   if not model_path:
-    model_type=str(input("you are going to use default model. please type what type of model you want( speed / accurate )"))
+    model_type=str(input("you are going to use default model. please type what type of model you want( speed / accurate ) ->"))
     if model_type=='speed':
       model_path='./models/ssd_mobilenet.tflite'
     elif model_type=='accurate':
@@ -273,7 +284,7 @@ if __name__ == "__main__":
   print(model_path)
 
   #인풋 사진
-  INPUT_IMAGE_URL=str(input("please type the directory of images: "))
+  INPUT_IMAGE_URL=str(input("please type the directory of images: ->"))
   if not INPUT_IMAGE_URL:
     INPUT_IMAGE_URL = './images/'
     
@@ -286,7 +297,7 @@ if __name__ == "__main__":
 
     
   #컨피던스 조절
-  DETECTION_THRESHOLD=float(input("please type the threshhold(0~1 default 0.4): "))
+  DETECTION_THRESHOLD=float(input("please type the threshhold(0~1 default 0.4): ->"))
   if DETECTION_THRESHOLD>1 or DETECTION_THRESHOLD<0:
     print("you typed wrong number...")
     DETECTION_THRESHOLD = 0.4
@@ -314,7 +325,6 @@ if __name__ == "__main__":
     print('-------------------------------')
     print(file+"  is Easy-Labeling!!")
     print(str(i/len(imagesTo)*100)+' is done.')
-    i+=1
     firstTime= time.time()
   
     detection_result_image = run_odt_and_draw_results(
@@ -326,6 +336,7 @@ if __name__ == "__main__":
   
     secondTime=time.time()
     secondTime-=firstTime
+    i+=1
     print("Inference Time: "+str(secondTime))
     print('-------------------------------')
   #pbar.close()
@@ -340,15 +351,37 @@ if __name__ == "__main__":
       print(str(a))
       ak47+=1
 
+  #show image option -> 16 pictures
+  if showImage==True:
+
+    imageList1=cv2.hconcat(imageList[0:4])
+    imageList2=cv2.hconcat(imageList[4:8])
+    imageList3=cv2.hconcat(imageList[8:12])
+    imageList4=cv2.hconcat(imageList[12:16])
+    finalImage=cv2.vconcat([imageList1,imageList2,imageList3,imageList4])
+
+  if showImage==True and checkPrecision==True:
+    result_list=libs.check_precision.calculate_All()
+    d=['accuracy','recall','precision','F1']
+
+    for a in range (0,len(result_list)):
+      label = "{}: {:.0f}%".format(d[a], result_list[a])
+      point=30, 30+(a*40)
+      text_size, _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 1, 3)
+      text_w, text_h = text_size
+      cv2.rectangle(finalImage, point, (30+text_w, 30+(a*40)+text_h-30), (0,0,255), -1)
+      cv2.putText(finalImage, label, point, cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 3)
+    cv2.imwrite(SHOW_IMAGE_URL+'finalImage.jpg', finalImage)
+
   while True:
       
     # Augmenatation
-    augQuest=str(input("Do you want to Augmentate your Datasets? (Y/N): "))
+    augQuest=str(input("Do you want to Augmentate your Datasets? (Y/N): ->"))
     augSeq=[]
 
-    if augQuest=="Y":
+    if augQuest=="Y" or augQuest=='y':
       
-      print("What type of augmentations do you want?:")
+      print("What type of augmentations do you want?: ->")
 
       while True:
         print("******fog*****")
@@ -358,7 +391,7 @@ if __name__ == "__main__":
         print("***snowflake**")
         print("     exit      ")
         
-        augType=str(input("please choose: "))
+        augType=str(input("please choose: ->"))
         if augType=="fog":
           augSeq.append(iaa.Fog())
         
@@ -384,7 +417,7 @@ if __name__ == "__main__":
       libs.imgaug_object_detection.start_aug(INPUT_IMAGE_URL,augSeq=augSeq)
       break
 
-    elif augQuest=="N":
+    elif augQuest=="N" or augQuest=='n':
 
       print("Ok, All process is complete!!!!!! Enjoy your Deep Learning!")
       quit()
