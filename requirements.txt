@@ -1,0 +1,12 @@
+absl==0.0
+absl_py==0.10.0
+imgaug==0.4.0
+numpy==1.21.4
+opencv_contrib_python==4.5.4.60
+pascal_voc_writer==0.1.4
+Pillow==9.1.1
+PyQt5==5.15.7
+setuptools==59.4.0
+tensorflow==2.9.1
+tensorflow_macos==2.7.0
+tqdm==4.62.3
